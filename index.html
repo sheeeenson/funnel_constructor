@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конструктор воронки продаж</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;500;700&display=swap');
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #F3F4F6; /* Светло-серый фон */
+            color: #000000; /* Чёрный текст */
+        }
+
+        h1, h2, h3 {
+            font-family: 'Press Start 2P', cursive;
+            color: #000000; /* Чёрный заголовок */
+            text-shadow: 2px 2px #D1D5DB; /* Светло-серая тень */
+        }
+
+        .card {
+            background-color: #D1D5DB; /* Более тёмный серый для карточек */
+            border: 4px solid #000000; /* Чёрные рамки */
+            border-radius: 0; /* 8-bit стиль */
+            box-shadow: 6px 6px #000000;
+            transition: all 0.1s linear;
+        }
+
+        .card:hover {
+            transform: translateY(-2px) translateX(-2px);
+            box-shadow: 8px 8px #000000;
+        }
+
+        button {
+            background-color: #000000; /* Чёрная кнопка */
+            border: 2px solid #000000;
+            color: #F3F4F6; /* Светло-серый текст на кнопке */
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: none;
+            box-shadow: 2px 2px #4B5563; /* Тёмная тень для кнопки */
+            transition: all 0.1s linear;
+        }
+
+        button:active {
+            transform: translateY(2px) translateX(2px);
+            box-shadow: none;
+        }
+        
+        input[type="text"], textarea {
+            background-color: #FFFFFF; /* Белый фон для полей ввода */
+            border: 2px solid #000000; /* Чёрная рамка */
+            color: #000000; /* Чёрный текст */
+            font-family: 'Roboto', sans-serif;
+            border-radius: 0;
+            box-shadow: inset 2px 2px #BCC3C9;
+        }
+
+        input[type="checkbox"] {
+            accent-color: #000000;
+        }
+
+        #message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #374151; /* Тёмно-серый фон */
+            border: 4px solid #000000; /* Чёрная рамка */
+            padding: 24px;
+            box-shadow: 6px 6px #000000;
+            text-align: center;
+            font-family: 'Press Start 2P', cursive;
+            z-index: 1000;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s forwards;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .modal-content {
+            background-color: #D1D5DB;
+            padding: 32px;
+            border: 4px solid #000000;
+            box-shadow: 6px 6px #000000;
+            text-align: center;
+            font-family: 'Roboto', sans-serif;
+        }
+        
+        @keyframes fadein {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        
+        @keyframes fadeout {
+            from { opacity: 1; }
+            to   { opacity: 0; }
+        }
+
+        .icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .icon svg {
+            fill: #000000; /* Чёрные иконки */
+            stroke: #000000; /* Чёрные иконки */
+        }
+
+        .expandable-item {
+            user-select: none;
+        }
+
+        .sub-list {
+            overflow: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .icon-expand {
+            display: inline-block;
+            transition: transform 0.2s linear;
+        }
+        .icon-expand.rotated {
+            transform: rotate(90deg);
+        }
+
+        .funnel-stage {
+            border: 4px solid #000000;
+            box-shadow: 4px 4px #000000;
+            background-color: #BCC3C9;
+        }
+
+        .share-button {
+            border: 2px solid #000000;
+            box-shadow: 2px 2px #4B5563;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div class="container mx-auto max-w-7xl">
+        <h1 class="text-3xl sm:text-4xl text-center mb-6 sm:mb-10">Конструктор воронки<br>от "Креативной Кухни"</h1>
+        <p class="text-center text-lg text-gray-800 mb-8">Создайте свою воронку, выбирая элементы на каждом этапе.</p>
+
+        <!-- Основной контейнер с двумя колонками -->
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Левая колонка: Элементы воронки -->
+            <div id="builder-controls" class="flex-1 lg:w-1/2">
+                <!-- Секция 1: Входы в воронку -->
+                <div id="traffic-sources" class="card p-6 sm:p-8 mb-8">
+                    <h2 class="text-2xl mb-4">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L2 12h5v10h10V12h5L12 2z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                            </svg>
+                        </span>
+                        1. Вход в воронку <span class="text-sm font-normal">(захват внимания)</span>
+                    </h2>
+                    <p class="text-gray-800 mb-4">Выберите, откуда приходят клиенты. Вы можете выбрать несколько вариантов.</p>
+        
+                    <ul class="space-y-3 mb-6 text-gray-900">
+                        <!-- Цифровые каналы -->
+                        <li class="expandable-item">
+                            <label class="cursor-pointer flex items-center" onclick="toggleSubmenu(this)">
+                                <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                                <span class="font-medium text-gray-800">Цифровые каналы:</span>
+                            </label>
+                            <ul class="sub-list ml-4 space-y-2 mt-2 hidden" data-section="traffic-digital">
+                                <!-- Социальные сети -->
+                                <li class="expandable-item">
+                                    <label class="cursor-pointer flex items-center" onclick="toggleSubmenu(this)">
+                                        <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                                        Социальные сети
+                                    </label>
+                                    <ul class="sub-list ml-4 space-y-2 mt-2 hidden" data-section="traffic-social">
+                                        <li><label><input type="checkbox" name="traffic-source" value="ВКонтакте" class="mr-2"> ВКонтакте</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="Telegram" class="mr-2"> Telegram</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="Instagram (Meta)" class="mr-2"> Instagram (Meta)</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="Facebook (Meta)" class="mr-2"> Facebook (Meta)</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="TikTok" class="mr-2"> TikTok</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="Threads" class="mr-2"> Threads</label></li>
+                                        <li>
+                                            <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                                <input type="text" id="traffic-social-input" placeholder="Добавить свою соцсеть" class="flex-1 p-2 rounded-md">
+                                                <button onclick="addOption('traffic-social-input', 'traffic-source')" class="py-2 px-4 rounded-md">
+                                                    Добавить
+                                                </button>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <!-- Контент-маркетинг -->
+                                <li class="expandable-item">
+                                    <label class="cursor-pointer flex items-center" onclick="toggleSubmenu(this)">
+                                        <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                                        Контент-маркетинг
+                                    </label>
+                                    <ul class="sub-list ml-4 space-y-2 mt-2 hidden" data-section="traffic-content">
+                                        <li><label><input type="checkbox" name="traffic-source" value="Блог" class="mr-2"> Блог</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="YouTube-канал" class="mr-2"> YouTube-канал</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="Подкаст" class="mr-2"> Подкаст</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="Статья на внешних ресурсах" class="mr-2"> Статья на внешних ресурсах</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="Email-рассылка" class="mr-2"> Email-рассылка</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="Мессенджер" class="mr-2"> Мессенджер</label></li>
+                                        <li>
+                                            <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                                <input type="text" id="traffic-content-input" placeholder="Добавить свой контент-канал" class="flex-1 p-2 rounded-md">
+                                                <button onclick="addOption('traffic-content-input', 'traffic-source')" class="py-2 px-4 rounded-md">
+                                                    Добавить
+                                                </button>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <!-- Поисковая реклама -->
+                                <li class="expandable-item">
+                                    <label class="cursor-pointer flex items-center" onclick="toggleSubmenu(this)">
+                                        <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                                        Поисковая реклама
+                                    </label>
+                                    <ul class="sub-list ml-4 space-y-2 mt-2 hidden" data-section="traffic-search">
+                                        <li><label><input type="checkbox" name="traffic-source" value="Яндекс Директ" class="mr-2"> Яндекс Директ</label></li>
+                                        <li><label><input type="checkbox" name="traffic-source" value="Google Реклама" class="mr-2"> Google Реклама</label></li>
+                                        <li>
+                                            <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                                <input type="text" id="traffic-search-input" placeholder="Добавить свою поисковую систему" class="flex-1 p-2 rounded-md">
+                                                <button onclick="addOption('traffic-search-input', 'traffic-source')" class="py-2 px-4 rounded-md">
+                                                    Добавить
+                                                </button>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <!-- Офлайн-каналы -->
+                        <li class="expandable-item">
+                            <label class="cursor-pointer flex items-center" onclick="toggleSubmenu(this)">
+                                <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                                <span class="font-medium text-gray-800">Офлайн-каналы:</span>
+                            </label>
+                            <ul class="sub-list ml-4 space-y-2 mt-2 hidden" data-section="traffic-offline">
+                                <li><label><input type="checkbox" name="traffic-source" value="Постеры" class="mr-2"> Постеры</label></li>
+                                <li><label><input type="checkbox" name="traffic-source" value="Билборды" class="mr-2"> Билборды</label></li>
+                                <li><label><input type="checkbox" name="traffic-source" value="Стикеры" class="mr-2"> Стикеры</label></li>
+                                <li><label><input type="checkbox" name="traffic-source" value="Трафареты на асфальте" class="mr-2"> Трафареты на асфальте</label></li>
+                                <li><label><input type="checkbox" name="traffic-source" value="Промо-акции и мероприятия" class="mr-2"> Промо-акции и мероприятия</label></li>
+                                <li><label><input type="checkbox" name="traffic-source" value="Промоутеры" class="mr-2"> Промоутеры</label></li>
+                                <li><label><input type="checkbox" name="traffic-source" value="Инсталляции" class="mr-2"> Инсталляции</label></li>
+                                <li><label><input type="checkbox" name="traffic-source" value="Реклама в печатных изданиях" class="mr-2"> Реклама в печатных изданиях</label></li>
+                                <li>
+                                    <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                        <input type="text" id="traffic-offline-input" placeholder="Добавить свой офлайн-канал" class="flex-1 p-2 rounded-md">
+                                        <button onclick="addOption('traffic-offline-input', 'traffic-source')" class="py-2 px-4 rounded-md">
+                                            Добавить
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+        
+                <!-- Секция 2: Оффер -->
+                <div id="offer" class="card p-6 sm:p-8 mb-8">
+                    <h2 class="text-2xl mb-4">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C8.68629 2 6 4.68629 6 8C6 11.3137 8.68629 14 12 14C15.3137 14 18 11.3137 18 8C18 4.68629 15.3137 2 12 2Z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                                <path d="M12 14V22" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                                <path d="M8 20H16" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                            </svg>
+                        </span>
+                        2. Оффер
+                    </h2>
+                    <p class="text-gray-800 mb-4">Создайте сильное предложение.</p>
+        
+                    <div class="mb-6">
+                        <h3 class="text-xl mb-3">Оффер:</h3>
+                        <textarea id="offer-text" rows="3" class="w-full p-2 rounded-md" placeholder="Например: 'Решим вашу проблему [X] без [Y] всего за [Z]'">
+                        </textarea>
+                    </div>
+                </div>
+
+                <!-- Секция 3: Лид-магнит -->
+                <div id="lead-magnet" class="card p-6 sm:p-8 mb-8">
+                    <h2 class="text-2xl mb-4">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C8.68629 2 6 4.68629 6 8C6 11.3137 8.68629 14 12 14C15.3137 14 18 11.3137 18 8C18 4.68629 15.3137 2 12 2Z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                                <path d="M12 14V22" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                                <path d="M8 20H16" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                            </svg>
+                        </span>
+                        3. Лид-магнит
+                    </h2>
+                    <p class="text-gray-800 mb-4">Предложите что-то ценное клиенту в обмен на контакт.</p>
+        
+                    <div class="mb-6">
+                        <h3 class="text-xl mb-3">Варианты:</h3>
+                        <ul class="sub-list space-y-2 text-gray-900" data-section="lead-magnet-items">
+                            <li><label><input type="checkbox" name="lead-magnet" value="Гайд" class="mr-2"> Гайд</label></li>
+                            <li><label><input type="checkbox" name="lead-magnet" value="Чек-лист" class="mr-2"> Чек-лист</label></li>
+                            <li><label><input type="checkbox" name="lead-magnet" value="PDF-книга" class="mr-2"> PDF-книга</label></li>
+                            <li><label><input type="checkbox" name="lead-magnet" value="Мини-курс или видео-урок" class="mr-2"> Мини-курс или видео-урок</label></li>
+                            <li><label><input type="checkbox" name="lead-magnet" value="Доступ к вебинару/мастер-классу" class="mr-2"> Доступ к вебинару/мастер-классу</label></li>
+                            <li><label><input type="checkbox" name="lead-magnet" value="Бесплатная консультация" class="mr-2"> Бесплатная консультация</label></li>
+                            <li><label><input type="checkbox" name="lead-magnet" value="Скидка или промокод" class="mr-2"> Скидка или промокод</label></li>
+                            <li>
+                                <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                    <input type="text" id="lead-magnet-input" placeholder="Добавить свой лид-магнит" class="flex-1 p-2 rounded-md">
+                                    <button onclick="addOption('lead-magnet-input', 'lead-magnet')" class="py-2 px-4 rounded-md">
+                                        Добавить
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- НОВАЯ СЕКЦИЯ: Точка взаимодействия -->
+                <div id="interaction-point" class="card p-6 sm:p-8 mb-8">
+                    <h2 class="text-2xl mb-4">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M12 8V12M12 12L15 15" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </span>
+                        4. Точка взаимодействия
+                    </h2>
+                    <p class="text-gray-800 mb-4">Выберите, куда вы ведете клиента после получения лид-магнита.</p>
+        
+                    <div class="mb-6">
+                        <h3 class="text-xl mb-3">Варианты:</h3>
+                        <ul class="sub-list space-y-2 text-gray-900" data-section="interaction-points">
+                             <!-- Социальные сети -->
+                             <li class="expandable-item">
+                                <label class="cursor-pointer flex items-center" onclick="toggleSubmenu(this)">
+                                    <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                                    Социальные сети
+                                </label>
+                                <ul class="sub-list ml-4 space-y-2 mt-2 hidden" data-section="interaction-social">
+                                    <li><label><input type="checkbox" name="interaction-point" value="ВКонтакте" class="mr-2"> ВКонтакте</label></li>
+                                    <li><label><input type="checkbox" name="interaction-point" value="Instagram (Meta)" class="mr-2"> Instagram (Meta)</label></li>
+                                    <li><label><input type="checkbox" name="interaction-point" value="Facebook (Meta)" class="mr-2"> Facebook (Meta)</label></li>
+                                    <li><label><input type="checkbox" name="interaction-point" value="TikTok" class="mr-2"> TikTok</label></li>
+                                    <li><label><input type="checkbox" name="interaction-point" value="Threads" class="mr-2"> Threads</label></li>
+                                    <li>
+                                        <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                            <input type="text" id="interaction-social-input" placeholder="Добавить свою соцсеть" class="flex-1 p-2 rounded-md">
+                                            <button onclick="addOption('interaction-social-input', 'interaction-point')" class="py-2 px-4 rounded-md">
+                                                Добавить
+                                            </button>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </li>
+                            <!-- Мессенджеры -->
+                            <li class="expandable-item">
+                                <label class="cursor-pointer flex items-center" onclick="toggleSubmenu(this)">
+                                    <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                                    Мессенджеры
+                                </label>
+                                <ul class="sub-list ml-4 space-y-2 mt-2 hidden" data-section="interaction-messengers">
+                                    <li><label><input type="checkbox" name="interaction-point" value="Telegram" class="mr-2"> Telegram</label></li>
+                                    <li><label><input type="checkbox" name="interaction-point" value="WhatsApp" class="mr-2"> WhatsApp</label></li>
+                                    <li><label><input type="checkbox" name="interaction-point" value="Viber" class="mr-2"> Viber</label></li>
+                                    <li>
+                                        <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                            <input type="text" id="interaction-messengers-input" placeholder="Добавить свой мессенджер" class="flex-1 p-2 rounded-md">
+                                            <button onclick="addOption('interaction-messengers-input', 'interaction-point')" class="py-2 px-4 rounded-md">
+                                                Добавить
+                                            </button>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li><label><input type="checkbox" name="interaction-point" value="Сайт / Лендинг" class="mr-2"> Сайт / Лендинг</label></li>
+                            <li>
+                                <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                    <input type="text" id="interaction-point-input" placeholder="Добавить свою точку" class="flex-1 p-2 rounded-md">
+                                    <button onclick="addOption('interaction-point-input', 'interaction-point')" class="py-2 px-4 rounded-md">
+                                        Добавить
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Секция 5: Прогрев (нумерация изменена) -->
+                <div id="nurturing" class="card p-6 sm:p-8 mb-8">
+                    <h2 class="text-2xl mb-4">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C8.68629 2 6 4.68629 6 8C6 11.3137 8.68629 14 12 14C15.3137 14 18 11.3137 18 8C18 4.68629 15.3137 2 12 2Z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                                <path d="M12 14V22" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                                <path d="M8 20H16" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                            </svg>
+                        </span>
+                        5. Прогрев <span class="text-sm font-normal">(формирование доверия и ценности)</span>
+                    </h2>
+                    <p class="text-gray-800 mb-4">Подготовьте клиента к покупке.</p>
+        
+                    <div>
+                        <h3 class="text-xl mb-3">Инструменты прогрева:</h3>
+                        <ul class="sub-list space-y-2 text-gray-900" data-section="nurturing-tools">
+                            <li><label><input type="checkbox" name="nurturing-tools" value="Квиз или опрос" class="mr-2"> Квиз или опрос</label></li>
+                            <li><label><input type="checkbox" name="nurturing-tools" value="Чат-бот" class="mr-2"> Чат-бот</label></li>
+                            <li><label><input type="checkbox" name="nurturing-tools" value="Email-рассылка" class="mr-2"> Email-рассылка</label></li>
+                            <li><label><input type="checkbox" name="nurturing-tools" value="Демо-версия продукта или пробный период" class="mr-2"> Демо-версия продукта или пробный период</label></li>
+                            <li>
+                                <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                    <input type="text" id="nurturing-input" placeholder="Добавить свой инструмент прогрева" class="flex-1 p-2 rounded-md">
+                                    <button onclick="addOption('nurturing-input', 'nurturing-tools')" class="py-2 px-4 rounded-md">
+                                        Добавить
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+        
+                <!-- Секция 6: Продажа (нумерация изменена) -->
+                <div id="sales" class="card p-6 sm:p-8 mb-8">
+                    <h2 class="text-2xl mb-4">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 4h16v16H4V4z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                                <path d="M8 8L16 16M16 8L8 16" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                            </svg>
+                        </span>
+                        6. Продажа
+                    </h2>
+                    <p class="text-gray-800 mb-4">Выберите, как будет происходить продажа.</p>
+        
+                    <div class="mb-6 expandable-item">
+                        <label class="cursor-pointer flex items-center mb-3" onclick="toggleSubmenu(this)">
+                            <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                            <h3 class="text-xl">Автоматическая продажа:</h3>
+                        </label>
+                        <ul class="sub-list space-y-2 text-gray-900 hidden" data-section="auto-sales">
+                            <li><label><input type="checkbox" name="auto-sales" value="Классический лендинг с корзиной" class="mr-2"> Классический лендинг с корзиной</label></li>
+                            <li><label><input type="checkbox" name="auto-sales" value="Оплата в чат-боте/мессенджере" class="mr-2"> Оплата в чат-боте/мессенджере</label></li>
+                            <li><label><input type="checkbox" name="auto-sales" value="Автоматизированный вебинар" class="mr-2"> Автоматизированный вебинар</label></li>
+                            <li><label><input type="checkbox" name="auto-sales" value="Автоворонка в email-рассылке" class="mr-2"> Автоворонка в email-рассылке</label></li>
+                            <li><label><input type="checkbox" name="auto-sales" value="SMS-рассылка" class="mr-2"> SMS-рассылка</label></li>
+                            <li><label><input type="checkbox" name="auto-sales" value="Триггерные (автоматические) допродажи (Upsell/Cross-sell)" class="mr-2"> Триггерные (автоматические) допродажи (Upsell/Cross-sell)</label></li>
+                            <li><label><input type="checkbox" name="auto-sales" value="Автозвонок" class="mr-2"> Автозвонок</label></li>
+                            <li><label><input type="checkbox" name="auto-sales" value="Продажи через воронку контента" class="mr-2"> Продажи через воронку контента</label></li>
+                            <li><label><input type="checkbox" name="auto-sales" value="Автоматические рассылки в социальных сетях" class="mr-2"> Автоматические рассылки в социальных сетях</label></li>
+                            <li>
+                                <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                    <input type="text" id="auto-sales-input" placeholder="Добавить свой способ" class="flex-1 p-2 rounded-md">
+                                    <button onclick="addOption('auto-sales-input', 'auto-sales')" class="py-2 px-4 rounded-md">
+                                        Добавить
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+        
+                    <div class="expandable-item">
+                        <label class="cursor-pointer flex items-center mb-3" onclick="toggleSubmenu(this)">
+                            <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                            <h3 class="text-xl">Продажа вручную (через менеджера):</h3>
+                        </label>
+                        <ul class="sub-list space-y-2 text-gray-900 hidden" data-section="manual-sales">
+                            <li><label><input type="checkbox" name="manual-sales" value="Звонок" class="mr-2"> Звонок</label></li>
+                            <li><label><input type="checkbox" name="manual-sales" value="Онлайн-консультация" class="mr-2"> Онлайн-консультация</label></li>
+                            <li><label><input type="checkbox" name="manual-sales" value="Встреча" class="mr-2"> Встреча</label></li>
+                            <li><label><input type="checkbox" name="manual-sales" value="Общение в мессенджерах" class="mr-2"> Общение в мессенджерах</label></li>
+                            <li>
+                                <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                    <input type="text" id="manual-sales-input" placeholder="Добавить свой способ" class="flex-1 p-2 rounded-md">
+                                    <button onclick="addOption('manual-sales-input', 'manual-sales')" class="py-2 px-4 rounded-md">
+                                        Добавить
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+        
+                <!-- Секция 7: Удержание и допродажи (нумерация изменена) -->
+                <div id="retention" class="card p-6 sm:p-8 mb-8">
+                    <h2 class="text-2xl mb-4">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                                <path d="M12 8V12M12 16H12.01" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" />
+                            </svg>
+                        </span>
+                        7. Удержание и допродажи
+                    </h2>
+                    <p class="text-gray-800 mb-4">Поддерживайте связь и стимулируйте повторные продажи.</p>
+        
+                    <div class="mb-6 expandable-item">
+                        <label class="cursor-pointer flex items-center mb-3" onclick="toggleSubmenu(this)">
+                            <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                            <h3 class="text-xl">Бонус после покупки:</h3>
+                        </label>
+                        <ul class="sub-list space-y-2 text-gray-900 hidden" data-section="bonuses">
+                            <li><label><input type="checkbox" name="bonuses" value="Скидка на следующую покупку" class="mr-2"> Скидка на следующую покупку</label></li>
+                            <li><label><input type="checkbox" name="bonuses" value="Подарок (например, эксклюзивный гайд)" class="mr-2"> Подарок (например, эксклюзивный гайд)</label></li>
+                            <li><label><input type="checkbox" name="bonuses" value="Доступ к закрытому сообществу" class="mr-2"> Доступ к закрытому сообществу</label></li>
+                            <li>
+                                <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                    <input type="text" id="bonuses-input" placeholder="Добавить свой бонус" class="flex-1 p-2 rounded-md">
+                                    <button onclick="addOption('bonuses-input', 'bonuses')" class="py-2 px-4 rounded-md">
+                                        Добавить
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+        
+                    <div class="expandable-item">
+                        <label class="cursor-pointer flex items-center mb-3" onclick="toggleSubmenu(this)">
+                            <span class="icon-expand mr-2 transform transition-transform duration-200">▶</span>
+                            <h3 class="text-xl">Дальнейшая коммуникация:</h3>
+                        </label>
+                        <ul class="sub-list space-y-2 text-gray-900 hidden" data-section="communication">
+                            <li><label><input type="checkbox" name="communication" value="Серия писем/сообщений с благодарностью и инструкциями" class="mr-2"> Серия писем/сообщений с благодарностью и инструкциями</label></li>
+                            <li><label><input type="checkbox" name="communication" value="Сбор обратной связи" class="mr-2"> Сбор обратной связи</label></li>
+                            <li><label><input type="checkbox" name="communication" value="Предложение сопутствующих товаров" class="mr-2"> Предложение сопутствующих товаров</label></li>
+                            <li><label><input type="checkbox" name="communication" value="Реактивация" class="mr-2"> Реактивация</label></li>
+                            <li>
+                                <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                                    <input type="text" id="communication-input" placeholder="Добавить свой вид коммуникации" class="flex-1 p-2 rounded-md">
+                                    <button onclick="addOption('communication-input', 'communication')" class="py-2 px-4 rounded-md">
+                                        Добавить
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Кнопки действий -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
+                    <button onclick="copyToClipboard()" class="py-3 px-8 rounded-full">
+                        Скопировать воронку
+                    </button>
+                    <button onclick="showShareModal()" class="py-3 px-8 rounded-full">
+                        Поделиться воронкой
+                    </button>
+                </div>
+            </div>
+
+            <!-- Правая колонка: Результат (воронка) -->
+            <div id="result-section" class="flex-1 lg:w-1/2">
+                <div class="card p-6 sm:p-8">
+                    <h2 class="text-2xl mb-4 text-center">Ваша воронка в реальном времени</h2>
+                    <div id="funnel-result" class="flex flex-col items-center"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для сообщений -->
+    <div id="message-box" class="hidden">
+        <p>Текст скопирован в буфер обмена!</p>
+    </div>
+
+    <!-- Модальное окно для обмена -->
+    <div id="share-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">Поделиться воронкой</h3>
+            <p class="mb-6">Выберите, куда отправить схему:</p>
+            <div class="flex flex-col gap-4">
+                <a id="whatsapp-link" href="#" target="_blank" class="py-2 px-4 bg-green-500 hover:bg-green-600 text-white rounded-md font-bold share-button">
+                    <svg class="w-5 h-5 inline-block mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12.0001 2.00012C6.47721 2.00012 2.00007 6.47726 2.00007 12.0001C2.00007 13.7915 2.5029 15.4851 3.39344 16.9208L2.00007 22.0001L7.14725 20.5902C8.58316 21.496 10.2766 22.0001 12.0001 22.0001C17.5229 22.0001 22.0001 17.5229 22.0001 12.0001C22.0001 6.47726 17.5229 2.00012 12.0001 2.00012ZM16.5982 15.6593C16.3263 16.2753 15.7001 16.4807 15.1118 16.2801C14.5234 16.0795 13.9213 15.867 13.2514 15.867C12.5815 15.867 12.071 16.2081 11.5369 16.8143C11.0028 17.4206 10.3766 18.0645 9.78822 18.253C9.20018 18.4418 8.44299 18.2838 7.91039 17.6593C7.37778 17.0347 6.84518 15.8851 7.37778 14.6593C7.91039 13.4335 8.92243 12.2754 9.45494 11.6593C9.98755 11.0432 10.5199 10.2536 11.0525 9.62899C11.5851 9.00438 12.1177 8.1501 12.6503 7.52549C13.1829 6.90088 13.7155 6.41727 14.2481 6.22872C14.7806 6.04018 15.3132 6.13098 15.8458 6.54117C16.3784 6.95136 16.911 7.57597 17.4436 8.20058C17.9762 8.82519 18.5088 9.3088 19.0414 9.50742C19.574 9.70604 20.1066 9.54808 20.6392 8.92347C21.1718 8.29886 21.7044 7.49886 22.237 6.87425" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    WhatsApp
+                </a>
+                <a id="telegram-link" href="#" target="_blank" class="py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-bold share-button">
+                    <svg class="w-5 h-5 inline-block mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 8L10 14L8 12M16 8L12 16L14 12L16 8Z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Telegram
+                </a>
+            </div>
+            <button onclick="hideShareModal()" class="py-2 px-6 mt-6 rounded-md bg-gray-300 text-black font-bold">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация звуков
+        const synth = new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: {
+                attack: 0.005,
+                decay: 0.1,
+                sustain: 0,
+                release: 0.1
+            }
+        }).toDestination();
+
+        // Функция для воспроизведения 8-битного звука
+        function playSound() {
+            synth.triggerAttackRelease("C4", "8n");
+        }
+
+        // Функция для добавления нового варианта в список
+        function addOption(inputId, name) {
+            playSound();
+            const input = document.getElementById(inputId);
+            const value = input.value.trim();
+            if (!value) return;
+
+            // Находим список, в который нужно добавить новый элемент
+            const list = input.closest('ul');
+
+            const newLi = document.createElement('li');
+            const newLabel = document.createElement('label');
+            const newInput = document.createElement('input');
+            newInput.type = 'checkbox';
+            newInput.name = name;
+            newInput.value = value;
+            newInput.className = 'mr-2';
+            newInput.addEventListener('change', generateFunnel);
+
+            newLabel.appendChild(newInput);
+            newLabel.appendChild(document.createTextNode(value));
+            newLi.appendChild(newLabel);
+            
+            // Вставляем новый элемент перед блоком добавления
+            const inputLi = input.closest('li');
+            list.insertBefore(newLi, inputLi);
+
+            input.value = '';
+            generateFunnel();
+        }
+
+        // Функция для показа/скрытия вложенных списков
+        function toggleSubmenu(element) {
+            playSound();
+            const parentLi = element.closest('.expandable-item');
+            const subList = parentLi.querySelector('.sub-list');
+            const icon = parentLi.querySelector('.icon-expand');
+            if (subList) {
+                subList.classList.toggle('hidden');
+                icon.classList.toggle('rotated');
+            }
+        }
+
+        // Функция для генерации итоговой схемы воронки
+        function generateFunnel() {
+            const resultDiv = document.getElementById('funnel-result');
+            resultDiv.innerHTML = ''; // Очищаем контейнер
+
+            const offerText = document.getElementById('offer-text').value.trim();
+            
+            const stages = [
+                {
+                    title: '1. Вход в воронку (захват внимания)',
+                    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 12h5v10h10V12h5L12 2z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /></svg>',
+                    items: Array.from(document.querySelectorAll('input[name="traffic-source"]:checked')).map(input => input.value)
+                },
+                {
+                    title: '2. Оффер',
+                    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.68629 2 6 4.68629 6 8C6 11.3137 8.68629 14 12 14C15.3137 14 18 11.3137 18 8C18 4.68629 15.3137 2 12 2Z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /><path d="M12 14V22" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /><path d="M8 20H16" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /></svg>',
+                    items: [offerText].filter(Boolean)
+                },
+                {
+                    title: '3. Лид-магнит',
+                    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.68629 2 6 4.68629 6 8C6 11.3137 8.68629 14 12 14C15.3137 14 18 11.3137 18 8C18 4.68629 15.3137 2 12 2Z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /><path d="M12 14V22" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /><path d="M8 20H16" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /></svg>',
+                    items: Array.from(document.querySelectorAll('input[name="lead-magnet"]:checked')).map(input => input.value)
+                },
+                {
+                    title: '4. Точка взаимодействия',
+                    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M12 8V12M12 12L15 15" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>',
+                    items: Array.from(document.querySelectorAll('input[name="interaction-point"]:checked')).map(input => input.value)
+                },
+                {
+                    title: '5. Прогрев (формирование доверия и ценности)',
+                    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.68629 2 6 4.68629 6 8C6 11.3137 8.68629 14 12 14C15.3137 14 18 11.3137 18 8C18 4.68629 15.3137 2 12 2Z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /><path d="M12 14V22" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /><path d="M8 20H16" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /></svg>',
+                    items: Array.from(document.querySelectorAll('input[name="nurturing-tools"]:checked')).map(input => input.value)
+                },
+                {
+                    title: '6. Продажа',
+                    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h16v16H4V4z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /><path d="M8 8L16 16M16 8L8 16" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /></svg>',
+                    items: Array.from(document.querySelectorAll('input[name="auto-sales"]:checked')).map(input => `Автоматическая: ${input.value}`)
+                        .concat(Array.from(document.querySelectorAll('input[name="manual-sales"]:checked')).map(input => `Вручную: ${input.value}`))
+                },
+                {
+                    title: '7. Удержание и допродажи',
+                    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /><path d="M12 8V12M12 16H12.01" stroke="#000000" stroke-width="2" stroke-linejoin="bevel" /></svg>',
+                    items: Array.from(document.querySelectorAll('input[name="bonuses"]:checked')).map(input => `Бонус: ${input.value}`)
+                        .concat(Array.from(document.querySelectorAll('input[name="communication"]:checked')).map(input => `Коммуникация: ${input.value}`))
+                }
+            ];
+
+            stages.forEach((stage, index) => {
+                const stageDiv = document.createElement('div');
+                stageDiv.className = 'funnel-stage p-4 w-full max-w-sm mb-6';
+                let itemsHtml = stage.items.length > 0
+                    ? stage.items.map(item => `<li class="text-sm font-medium">${item}</li>`).join('')
+                    : '<li class="text-sm text-gray-700">Не выбрано</li>';
+
+                stageDiv.innerHTML = `
+                    <div class="flex items-center mb-2">
+                        <span class="icon w-6 h-6 mr-2">${stage.icon}</span>
+                        <h3 class="font-bold text-xl">${stage.title}</h3>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 pl-4">
+                        ${itemsHtml}
+                    </ul>
+                `;
+                resultDiv.appendChild(stageDiv);
+
+                // Добавляем стрелку, кроме последнего этапа
+                if (index < stages.length - 1) {
+                    const arrowSvg = `
+                        <svg class="mb-6" width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                           <path d="M12 2L12 22M12 22L17 17M12 22L7 17" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    `;
+                    const arrowDiv = document.createElement('div');
+                    arrowDiv.innerHTML = arrowSvg;
+                    resultDiv.appendChild(arrowDiv);
+                }
+            });
+        }
+
+        // Функция для получения текста воронки для копирования/отправки
+        function getFunnelText() {
+            let textToCopy = '';
+            
+            textToCopy += 'Ваша воронка продаж:\n\n';
+            textToCopy += '1. Вход в воронку (захват внимания):\n' + 
+                Array.from(document.querySelectorAll('input[name="traffic-source"]:checked')).map(input => `- ${input.value}`).join('\n') + '\n\n';
+
+            textToCopy += '2. Оффер:\n';
+            const offerText = document.getElementById('offer-text').value.trim();
+            textToCopy += `  - ${offerText || 'Не указан'}\n\n`;
+
+            textToCopy += '3. Лид-магнит:\n' + Array.from(document.querySelectorAll('input[name="lead-magnet"]:checked')).map(input => `  - ${input.value}`).join('\n') + '\n\n';
+            
+            textToCopy += '4. Точка взаимодействия:\n' + Array.from(document.querySelectorAll('input[name="interaction-point"]:checked')).map(input => `  - ${input.value}`).join('\n') + '\n\n';
+
+            textToCopy += '5. Прогрев (формирование доверия и ценности):\n' + Array.from(document.querySelectorAll('input[name="nurturing-tools"]:checked')).map(input => `  - ${input.value}`).join('\n') + '\n\n';
+
+            textToCopy += '6. Продажа:\n';
+            const autoSalesItems = Array.from(document.querySelectorAll('input[name="auto-sales"]:checked')).map(input => `- ${input.value}`).join('\n');
+            const manualSalesItems = Array.from(document.querySelectorAll('input[name="manual-sales"]:checked')).map(input => `- ${input.value}`).join('\n');
+            textToCopy += `  Автоматическая продажа:\n` + (autoSalesItems || '  - Не выбрано') + '\n\n';
+            textToCopy += `  Продажа вручную:\n` + (manualSalesItems || '  - Не выбрано') + '\n\n';
+
+            textToCopy += '7. Удержание и допродажи:\n';
+            const bonusItems = Array.from(document.querySelectorAll('input[name="bonuses"]:checked')).map(input => `- ${input.value}`).join('\n');
+            const communicationItems = Array.from(document.querySelectorAll('input[name="communication"]:checked')).map(input => `- ${input.value}`).join('\n');
+            textToCopy += `  Бонус после покупки:\n` + (bonusItems || '  - Не выбрано') + '\n\n';
+            textToCopy += `  Дальнейшая коммуникация:\n` + (communicationItems || '  - Не выбрано');
+            
+            return textToCopy;
+        }
+
+        // Функция для копирования текста в буфер обмена
+        function copyToClipboard() {
+            playSound();
+            const textToCopy = getFunnelText();
+            
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = textToCopy;
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextarea);
+
+            const messageBox = document.getElementById('message-box');
+            messageBox.classList.remove('hidden');
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Функции для модального окна обмена
+        function showShareModal() {
+            playSound();
+            const modal = document.getElementById('share-modal');
+            modal.classList.remove('hidden');
+
+            const funnelText = getFunnelText();
+            const encodedText = encodeURIComponent(funnelText);
+
+            document.getElementById('whatsapp-link').href = `https://wa.me/?text=${encodedText}`;
+            document.getElementById('telegram-link').href = `https://t.me/share/url?url=${window.location.href}&text=${encodedText}`;
+        }
+
+        function hideShareModal() {
+            playSound();
+            document.getElementById('share-modal').classList.add('hidden');
+        }
+
+        // Добавляем слушателей событий для интерактивного обновления
+        function setupListeners() {
+            // Добавляем слушателей для чекбоксов
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', generateFunnel);
+            });
+            // Добавляем слушателей для текстовых полей
+            document.getElementById('offer-text').addEventListener('input', generateFunnel);
+        }
+        
+        // Добавляем слушателей на добавленные кнопки
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', playSound);
+        });
+
+        // Сразу же генерируем воронку при загрузке скрипта
+        window.onload = () => {
+            setupListeners();
+            generateFunnel();
+        };
+
+        // MutationObserver для отслеживания динамически добавленных элементов
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    // Переназначаем слушателей, чтобы они работали с новыми элементами
+                    setupListeners();
+                }
+            });
+        });
+        
+        // Начинаем отслеживать изменения в 'builder-controls'
+        observer.observe(document.getElementById('builder-controls'), {
+            childList: true,
+            subtree: true
+        });
+
+    </script>
+</body>
+</html>
